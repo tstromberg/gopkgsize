@@ -24,18 +24,22 @@
           },
           viewWindow: {
             min: 0.8,
-            max: 80,
+            max: {{ .HMax }},
           },
+          baselineColor: '#eee',
         },
         vAxis: {
           title: 'Imports',
-          logScale: true,
           gridlines: {
             count: 0,
           },
           viewWindow: {
-            min: -1,
+            min: -0.5,
+            max: {{ .VMax }},
           },
+         scaleType: 'mirrorLog',
+         baselineColor: '#eee',
+
         },
         bubble: {
           textStyle: {
@@ -43,7 +47,7 @@
           },
         },
         sizeAxis: {
-          maxSize: 85,
+          maxSize: {{ .SizeMax }},
         },
       };
 

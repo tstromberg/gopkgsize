@@ -17,6 +17,12 @@ import (
 // How many directories to include in category name
 const TopParts = 2
 
+// What multiplier of extra room to give a chart (20%)
+const MaxBufferPercent = 1.25
+
+// Maximum size of a bubble
+const MaxBubbleSize = 100
+
 type Package struct {
 	Path    string
 	Top     string
@@ -38,6 +44,9 @@ type ClocGo struct {
 
 type TemplateData struct {
 	Packages []*Package
+	HMax     int
+	VMax     int
+	SizeMax  int
 }
 
 // Cloc runs the cloc program on a directory
@@ -82,7 +91,11 @@ func ProcessDir(root string, path string, imap map[string][]string) (*Package, e
 	if err != nil {
 		panic(fmt.Sprintf("Cloc: %v", err))
 	}
-	top := strings.Join(strings.Split(rel, "/")[:TopParts], "/")
+	top := rel
+	parts := strings.Split(rel, "/")
+	if len(parts) > TopParts {
+		top = strings.Join(parts[:TopParts], "/")
+	}
 
 	p := &Package{
 		Path:    path,
@@ -144,16 +157,28 @@ func main() {
 	}
 
 	packages := []*Package{}
+	hMax := 0
+	vMax := 0
+
 	for d := range goDirs {
 		p, err := ProcessDir(root, d, importMap)
 		if err != nil {
 			panic(fmt.Sprintf("Rel: %v", err))
 		}
+		if p.Imports > hMax {
+			vMax = p.Imports
+		}
+		if p.Files > vMax {
+			hMax = p.Files
+		}
 		packages = append(packages, p)
 	}
 
+	vMax = int(float64(vMax) * MaxBufferPercent)
+	hMax = int(float64(hMax) * MaxBufferPercent)
+
 	tmpl := template.Must(template.ParseFiles("gopkgsize.tmpl"))
-	err = tmpl.Execute(os.Stdout, &TemplateData{Packages: packages})
+	err = tmpl.Execute(os.Stdout, &TemplateData{Packages: packages, HMax: hMax, VMax: vMax, SizeMax: MaxBubbleSize})
 	if err != nil {
 		panic(err)
 	}
