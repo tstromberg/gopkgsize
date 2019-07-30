@@ -18,7 +18,7 @@ import (
 const TopParts = 2
 
 // What multiplier of extra room to give a chart (20%)
-const MaxBufferPercent = 1.6
+const MaxBufferPercent = 1.8
 
 // Maximum size of a bubble
 const MaxBubbleSize = 100
@@ -27,6 +27,8 @@ const MaxBubbleSize = 100
 var ignoreDir = map[string]bool{
 	"vendor":      true,
 	"third_party": true,
+	"examples":    true,
+	"hack":        true,
 }
 
 type Package struct {
@@ -193,10 +195,10 @@ func main() {
 		if err != nil {
 			panic(fmt.Sprintf("Rel: %v", err))
 		}
-		if p.Imports > hMax {
+		if p.Imports > vMax {
 			vMax = p.Imports
 		}
-		if p.Files > vMax {
+		if p.Files > hMax {
 			hMax = p.Files
 		}
 		packages = append(packages, p)
