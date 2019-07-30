@@ -18,7 +18,7 @@ import (
 const TopParts = 2
 
 // What multiplier of extra room to give a chart (20%)
-const MaxBufferPercent = 1.25
+const MaxBufferPercent = 1.35
 
 // Maximum size of a bubble
 const MaxBubbleSize = 100
