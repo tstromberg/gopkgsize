@@ -23,6 +23,12 @@ const MaxBufferPercent = 1.25
 // Maximum size of a bubble
 const MaxBubbleSize = 100
 
+// Paths to ignore
+var ignoreDir = map[string]bool{
+	"vendor":      true,
+	"third_party": true,
+}
+
 type Package struct {
 	Path    string
 	Top     string
@@ -51,9 +57,22 @@ type TemplateData struct {
 
 // Cloc runs the cloc program on a directory
 func Cloc(path string) (*ClocOutput, error) {
-	out, err := exec.Command("cloc", "--json", path).Output()
+	// So that we may only operate on the top-level Go files
+	files, err := ioutil.ReadDir(path)
 	if err != nil {
-		return nil, fmt.Errorf("exec: %v", err)
+		return nil, err
+	}
+	gf := []string{}
+	for _, f := range files {
+		if filepath.Ext(f.Name()) == ".go" {
+			gf = append(gf, filepath.Join(path, f.Name()))
+		}
+	}
+
+	cmd := append([]string{"cloc", "--json"}, gf...)
+	out, err := exec.Command(cmd[0], cmd[1:]...).Output()
+	if err != nil {
+		return nil, fmt.Errorf("exec %s: %v", cmd, err)
 	}
 
 	c := &ClocOutput{}
@@ -71,7 +90,7 @@ func PackageName(path string) (string, error) {
 	c.Env = append(os.Environ(), "GO111MODULE=on")
 	out, err := c.Output()
 	if err != nil {
-		return "", fmt.Errorf("exec: %v", err)
+		return "", fmt.Errorf("go list %s: %v", path, err)
 	}
 	return strings.TrimSpace(string(out)), nil
 }
@@ -85,8 +104,10 @@ func ProcessDir(root string, path string, imap map[string][]string) (*Package, e
 
 	pkg, err := PackageName(path)
 	if err != nil {
-		panic(fmt.Sprintf("PackageName: %v", err))
+		fmt.Printf("<!-- PackageName failed: %v -->\n", err)
+		pkg = rel
 	}
+
 	c, err := Cloc(path)
 	if err != nil {
 		panic(fmt.Sprintf("Cloc: %v", err))
@@ -106,6 +127,7 @@ func ProcessDir(root string, path string, imap map[string][]string) (*Package, e
 		Files:   c.Go.NFiles,
 		Imports: len(imap[pkg]),
 	}
+	fmt.Printf("<!-- %s: %d files, %d imports, %d lines -->\n", p.Name, p.Files, p.Imports, p.Lines)
 	return p, nil
 }
 
@@ -134,6 +156,12 @@ func main() {
 	goDirs := map[string]bool{}
 	root := os.Args[1]
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if info.IsDir() {
+			if ignoreDir[info.Name()] {
+				return filepath.SkipDir
+			}
+		}
+
 		if filepath.Ext(path) == ".go" {
 			imports, err := parseImports(fset, path)
 			if err != nil {
