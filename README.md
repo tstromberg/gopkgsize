@@ -6,3 +6,6 @@ Usage:
 `go run gopkgsize.go ~/src/minikube > graph.html`
 
 
+## requirment 
+- install `cloc`
+
